@@ -1,42 +1,59 @@
-# Daylog
+# Daylog — synced version
 
-A daily work-summary app. Folders hold projects, projects hold tasks and subtasks.
-Log by timer, by ticking a task, or by typing bullets — the day writes itself up,
-with charts and a sendable summary.
+Same app, plus Google sign-in and cloud sync. One file, no build step, no server
+of your own. Your Firebase project (`daylog-dbb57`) is already wired in.
 
-Single file, no build step, no server. `index.html` is the whole app.
+## Deploy it (GitHub Pages)
 
-## Run it locally
+1. New GitHub repo, e.g. `daylog`.
+2. Upload `index.html` and this README to the repo root.
+3. Settings → Pages → Source: **Deploy from a branch**, branch `main`, folder `/ (root)`. Save.
+4. Live at `https://<your-username>.github.io/daylog/` in about a minute.
 
-Open `index.html` in any browser. That's it.
+## Two things to switch on in Firebase (one-time)
 
-## Put it online (GitHub Pages — free)
+**1. Authorize your domain.** Firebase console → Authentication → Settings →
+Authorized domains → Add domain → `<your-username>.github.io`.
+Without this, Google sign-in is rejected.
 
-1. Create a new repository on GitHub, e.g. `daylog`.
-2. Upload `index.html` (and this README) to the repo root — drag and drop works.
-3. Repo → **Settings** → **Pages**.
-4. Under "Build and deployment", Source = **Deploy from a branch**, Branch = `main`, folder = `/ (root)`. Save.
-5. Wait about a minute. Your app is live at `https://<your-username>.github.io/daylog/`.
+**2. Lock the database to each user.** Firestore Database → Rules → paste this → Publish:
 
-Open that URL on your phone and use "Add to Home Screen" — it behaves like an installed app.
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
 
-## Where your data lives
+That means only you can read or write your own log — nobody else, even though
+the page itself is public.
 
-In the browser, on the device you're using. Nothing is sent anywhere.
+## Using it
 
-That means:
+- Open the URL, **Continue with Google**. Log your day.
+- Open the same URL on your laptop, sign in with the same Google account —
+  everything's there, including a running timer.
+- On your phone: Share → **Add to Home Screen**. It opens like an app.
+- The status pill next to the date reads *Synced*, *Offline — queued*, or *This device*.
 
-- Data survives closing the tab, reloading, and restarting the phone.
-- It does **not** move between devices on its own.
-- To move it: **Insights → Download backup**, then **Restore backup** on the other device.
-- Same-browser rule: data saved in Safari won't show up in Chrome.
+**Offline:** entries and ticks are saved locally and pushed when you reconnect.
+Merging is per item, so a day edited on two devices keeps both sets of bullets
+rather than one overwriting the other.
 
-Erasing browser site data for this URL erases the log — keep backups if it matters.
+**"Just use this device"** on the sign-in screen skips the cloud entirely —
+everything stays in that browser. You can sign in later from Insights and what
+you already logged gets uploaded.
 
-## Making it sync across devices
+## Notes
 
-That needs a server and accounts, which a static page can't do alone. The usual
-route: add a hosted database (Supabase and Firebase both have free tiers), an
-email or Google sign-in, and write entries to that instead of local storage.
-The screens for it — sign-in, sync status, offline queue, conflict merge — are
-already designed in the companion design file.
+- Google sign-in only works over http/https (GitHub Pages, or a local server).
+  Opening `index.html` straight off your disk will offer device-only mode instead.
+- The `apiKey` in this file is meant to be public; the security rules above are
+  what protect your data.
+- Insights → **Download backup** writes a JSON file; **Restore backup** merges it
+  back in. Worth doing occasionally regardless of sync.
+- Free tier limits are far beyond one person's daily log.
